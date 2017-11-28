@@ -1,6 +1,5 @@
 // //--------------------------Google maps--------------------------------------
 var map;
-
 function initMap() {
     central = {lat: 40.7291, lng:-73.9965};
 /*	central = new google.maps.LatLng(40.7291, -73.9965);*/
@@ -385,7 +384,6 @@ function AlternativeFuelStation(controlDiv, map) {
             }
         });
       }
-
 //---------------------------FIN funciones dentro del mapa--------------------
 
 //---------------------------------  D3.JS  ---------------------------------------
