@@ -1,8 +1,7 @@
 // //--------------------------Google maps--------------------------------------
-var map;
-var central;
+var map,
+    central;
 function initMap() {
-    "use strict";
     //2 formas de establecer las coordenadas
     central = {lat: 40.7291, lng: -73.9965};
     /*central = new google.maps.LatLng(40.7291, -73.9965);*/
@@ -10,25 +9,26 @@ function initMap() {
         zoom: 12,
         center: central,
         mapTypeControl: false
-            });
+            });
     /*Marca para la coordenada dada*/
     new google.maps.Marker({
         position: central,
         map: map,
         icon: "https://png.icons8.com/university-filled/ios7/60/332877"//se usa iconos
     });
-
     //Se crea un div para colocar los botones
     var centerControlDiv = document.createElement("div");
     //se llaman las funciones que crean los botones, se les pasa el div padre
     // y el mapa al cual se vana ha agregar
-    CenterControl(centerControlDiv, map);
-    Zillow(centerControlDiv, map);
-    Museum(centerControlDiv, map);
-    FireDepartments(centerControlDiv, map);
-    ArtGallery(centerControlDiv, map);
-    Vaccinations(centerControlDiv, map);
-    AlternativeFuelStation(centerControlDiv, map);
+    var textLabels = ["Click to recenter the map", "Click to Lodging", "Click to Museums", 
+                    "Click to Fire Departments", "Click to Art Gallery", 
+                    "Click to Vaccinations", "Click to Alternative Fuel Station"];
+    var nameButtons = [ "Center Map", "Lodging", "Museums", "Fire Departments", 
+                        "Art Gallery", "Vaccinations", "Alternative Fuel Station"];
+    var sizeArrayButton = nameButtons.length;
+    for (let i = 0; i < sizeArrayButton; i++) {
+        buttonsMap(centerControlDiv, map, textLabels[i], nameButtons[i]);
+    }
     //se push el div padre a los controles del mapa y se posiciona arriba derecha
     map.controls[google.maps.ControlPosition.TOP_RIGHT].push(centerControlDiv);
 
@@ -74,20 +74,28 @@ function initMap() {
             console.log("Hecho.....Procesado");
         })
     }
-
 }
 */
 //infromacion de viviendas en arriendo
 var AZillow = [];
+var AMuseums = [];
+var markersArtGallery = [];
+var markerClusterArtGallery;
+var AFireDepartments = [];
+var markersVaccinations = [];
+var markerClusterVaccinations;
+var markersAlternativeFuelStation = [];
+var markerClusterAlternativeFuelStation;
+
 function getDataZillow() {
     var xZillow = $.get("http://www.zillow.com/webservice/GetSearchResults.htm?zws-id=X1-ZWz18wmjk4ti4r_728x4&address=NewYork&citystatezip=NY/NYC/100")
     .done(function(){
         var jZillow = xmlToJson($.parseXML(xZillow.responseText));
         jZillow["SearchResults:searchresults"].response.results.result.forEach(function(value){
-            var latitud = value.address.latitude;
-            var longitud = value.address.longitude;
-            var lalg = new google.maps.LatLng(latitud, longitud);
-            var marker = new google.maps.Marker({
+            var latitud = value.address.latitude,
+                longitud = value.address.longitude,
+                lalg = new google.maps.LatLng(latitud, longitud),
+                marker = new google.maps.Marker({
                 position: lalg,
                 map: map,
                 icon: "https://png.icons8.com/bed-filled/ios7/22/8b4513"
@@ -100,22 +108,21 @@ function getDataZillow() {
         console.log(error);
     });
 }
-//borra iconoc
+
 function remZillow() {
     AZillow.forEach(function(value){
       value.setMap(null);
   });
 }
 
-var AMuseums = [];
 function getDataMuseum() {
     var JMuseums = $.get("https://data.cityofnewyork.us/api/views/fn6f-htvy/rows.json?accessType=DOWNLOAD")
     .done(function(){
         JMuseums.responseJSON.data.forEach(function(value){
-            var pS = value[8];
-            var pos = pS.split("(")[1].split(")")[0].split(" ");
-            var lalg = new google.maps.LatLng(pos[1], pos[0]);
-            var marker = new google.maps.Marker({
+            var pS = value[8],
+                pos = pS.split("(")[1].split(")")[0].split(" "),
+                lalg = new google.maps.LatLng(pos[1], pos[0]),
+                marker = new google.maps.Marker({
                 position: lalg,
                 map: map,
                 icon: "https://png.icons8.com/museum/color/22/000000"
@@ -135,16 +142,40 @@ function remMuseums(){
  });
 }
 
-var AFireDepartments = [];
+function getArtGallery() {
+    var JArtGallery = $.get("https://data.cityofnewyork.us/api/views/43hw-uvdj/rows.json?accessType=DOWNLOAD")
+    .done(function(){
+        JArtGallery.responseJSON.data.forEach(function(value){
+            var pS = value[9],
+                pos = pS.split("(")[1].split(")")[0].split(" "),
+                lalg = new google.maps.LatLng(pos[1], pos[0]),
+                marker = new google.maps.Marker({"position": lalg,
+                icon: "https://png.icons8.com/art-prices-filled/ios7/40/551a8b"});
+            markersArtGallery.push(marker);
+        });
+        markerClusterArtGallery = new MarkerClusterer(map, markersArtGallery,
+            {imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m"});
+    })
+
+    .fail(function(error){
+      console.log(error);
+  });
+}
+
+function remArtGallery(){
+    markerClusterArtGallery.clearMarkers();
+    markersArtGallery = [];
+}
+
 function getFireDepartments() {
     var JFireDepartments = $.get("https://data.ny.gov/api/views/qfsu-zcpv/rows.json?accessType=DOWNLOAD")
     .done(function(){
         JFireDepartments.responseJSON.data.forEach(function(value){
             if(value[8].includes("NEW YORK CITY")){
-                var latitude = value[17];
-                var longitude = value[18];
-                var lalg = new google.maps.LatLng(latitude, longitude);
-                var marker = new google.maps.Marker({
+                var latitude = value[17],
+                    longitude = value[18],
+                    lalg = new google.maps.LatLng(latitude, longitude),
+                    marker = new google.maps.Marker({
                     position: lalg,
                     map: map,
                     icon: "https://png.icons8.com/firefighter-filled/ios7/40/c0392b"
@@ -165,44 +196,14 @@ function remFireDepartments(){
     });
 }
 
-var markersArtGallery = [];
-var markerClusterArtGallery;
-function getArtGallery() {
-    var JArtGallery = $.get("https://data.cityofnewyork.us/api/views/43hw-uvdj/rows.json?accessType=DOWNLOAD")
-    .done(function(){
-        JArtGallery.responseJSON.data.forEach(function(value){
-            var pS = value[9];
-            var pos = pS.split("(")[1].split(")")[0].split(" ");
-            var lalg = new google.maps.LatLng(pos[1], pos[0]);
-            var marker = new google.maps.Marker({"position": lalg,
-                icon: "https://png.icons8.com/art-prices-filled/ios7/40/551a8b"});
-            markersArtGallery.push(marker);
-        });
-        markerClusterArtGallery = new MarkerClusterer(map, markersArtGallery,
-            {imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m"});
-    })
-
-    .fail(function(error){
-      console.log(error);
-  });
-}
-
-
-function remArtGallery(){
-    markerClusterArtGallery.clearMarkers();
-    markersArtGallery = [];
-}
-
-var markersVaccinations = [];
-var markerClusterVaccinations;
 function getVaccinations() {
     var JVaccinations = $.get("https://data.cityofnewyork.us/api/views/w9ei-idxz/rows.json?accessType=DOWNLOAD")
     .done(function(){
         JVaccinations.responseJSON.data.forEach(function(value){
-            var latitude = value[19];
-            var longitude = value[20];
-            var lalg = new google.maps.LatLng(latitude, longitude);
-            var marker = new google.maps.Marker({"position": lalg,
+            var latitude = value[19],
+                longitude = value[20],
+                lalg = new google.maps.LatLng(latitude, longitude),
+                marker = new google.maps.Marker({"position": lalg,
                 icon: "https://png.icons8.com/syringe-filled/ios7/40/9b0000"});
             markersVaccinations.push(marker);
         });
@@ -214,21 +215,20 @@ function getVaccinations() {
       console.log(error);
   });
 }
+
 function remVaccinations(){
     markerClusterVaccinations.clearMarkers();
     markersVaccinations = [];
 }
 
-var markersAlternativeFuelStation = [];
-var markerClusterAlternativeFuelStation;
 function getAlternativeFuelStation() {
     var JAlternativeFuelStation = $.get("https://data.ny.gov/api/views/bpkx-gmh7/rows.json?accessType=DOWNLOAD")
     .done(function(){
         JAlternativeFuelStation.responseJSON.data.forEach(function(value){
-            var latitude = value[32];
-            var longitude = value[33];
-            var lalg = new google.maps.LatLng(latitude, longitude);
-            var marker = new google.maps.Marker({"position": lalg,
+            var latitude = value[32],
+                longitude = value[33],
+                lalg = new google.maps.LatLng(latitude, longitude),
+                marker = new google.maps.Marker({"position": lalg,
                 icon: "https://png.icons8.com/gas-station-filled/ios7/53/2ecc71"});
             markersAlternativeFuelStation.push(marker);
         });
@@ -247,7 +247,7 @@ function remAlternativeFuelStation(){
 }
 
 //---------------------Cargar del DOM primero-----------------
-$(document).ready( function(){
+$(function(){
     $(".carousel").carousel({
       interval: 5000
   });
@@ -255,7 +255,6 @@ $(document).ready( function(){
 //------------------------Fin datasets----------------------
 
 //---------------------------funciones dentro del mapa--------------------
-
 //estilo de los botones
 function styleControlUI(title){
     var d = document.createElement("div");
@@ -279,105 +278,67 @@ function styleControlText(label){
     cT.innerHTML = label;
     return cT;
 }
-//
-function CenterControl(controlDiv, map) {
-    var controlUI = new styleControlUI("Click to recenter the map");
+//obtiene o borra datos del mapa
+function buttonsMap(controlDiv, map, textLabel, nameButton){
+    var controlUI = new styleControlUI(textLabel);
     controlDiv.appendChild(controlUI);
-    var controlText = new styleControlText("Center Map");
+    var controlText = new styleControlText(nameButton);
     controlUI.appendChild(controlText);
     controlUI.addEventListener("click", function() {
-      map.setCenter(central);
-  });
-}
-
-function Zillow(controlDiv, map) {
-    var controlUI = new styleControlUI("Click to Lodging");
-    controlDiv.appendChild(controlUI);
-    var controlText = new styleControlText("Lodging");
-    controlUI.appendChild(controlText);
-    controlUI.addEventListener("click", function() {
-        if(AZillow.length > 0){
-            remZillow();
-            AZillow = [];
-        }else{
-            getDataZillow();
-        }
-    });
-}
-
-function Museum(controlDiv, map) {
-    var controlUI = new styleControlUI("Click to Museums");
-    controlDiv.appendChild(controlUI);
-    var controlText = new styleControlText("Museums");
-    controlUI.appendChild(controlText);
-    controlUI.addEventListener("click", function() {
-        if(AMuseums.length > 0){
-            remMuseums();
-            AMuseums = [];
-        }else{
-            getDataMuseum();
-        }
-    });
-}
-
-function FireDepartments(controlDiv, map) {
-    var controlUI = new styleControlUI("Click to Fire Departments");
-    controlDiv.appendChild(controlUI);
-    var controlText = new styleControlText("Fire Departments");
-    controlUI.appendChild(controlText);
-    controlUI.addEventListener("click", function() {
-        if(AFireDepartments.length > 0){
-            remFireDepartments();
-            AFireDepartments = [];
-        }else{
-            getFireDepartments();
-        }
-    });
-}
-
-function ArtGallery(controlDiv, map) {
-    var controlUI = new styleControlUI("Click to Art Gallery");
-    controlDiv.appendChild(controlUI);
-    var controlText = new styleControlText("Art Gallery");
-    controlUI.appendChild(controlText);
-    controlUI.addEventListener("click", function() {
-        if(markersArtGallery.length > 0){
-            remArtGallery();
-        }else{
-            getArtGallery();
-        }
-    });
-}
-
-function Vaccinations(controlDiv, map) {
-    var controlUI = new styleControlUI("Click to Vaccinations");
-    controlDiv.appendChild(controlUI);
-    var controlText = new styleControlText("Vaccinations");
-    controlUI.appendChild(controlText);
-    controlUI.addEventListener("click", function() {
-        if(markersVaccinations.length > 0){
-            remVaccinations();
-        }else{
-            getVaccinations();
-        }
-    });
-}
-
-function AlternativeFuelStation(controlDiv, map) {
-    var controlUI = new styleControlUI("Click to Alternative Fuel Station");
-    controlDiv.appendChild(controlUI);
-    var controlText = new styleControlText("Alternative Fuel Station");
-    controlUI.appendChild(controlText);
-    controlUI.addEventListener("click", function() {
-        if(markersAlternativeFuelStation.length > 0){
-            remAlternativeFuelStation();
-        }else{
-            getAlternativeFuelStation();
+        switch(nameButton){
+            case "Center Map":
+                map.setCenter(central);
+                break;
+            case "Lodging":
+                if(AZillow.length > 0){
+                    remZillow();
+                    AZillow = [];
+                } else {
+                    getDataZillow();
+                }
+                break;
+            case "Museums":
+                if(AMuseums.length > 0){
+                    remMuseums();
+                    AMuseums = [];
+                } else {
+                    getDataMuseum();
+                }
+                break;
+            case "Fire Departments":
+                if(AFireDepartments.length > 0){
+                    remFireDepartments();
+                    AFireDepartments = [];
+                } else {
+                    getFireDepartments();
+                }
+                break;
+            case "Art Gallery":
+                if(markersArtGallery.length > 0){
+                    remArtGallery();
+                } else {
+                    getArtGallery();
+                }
+                break;
+            case "Vaccinations":
+                if(markersVaccinations.length > 0){
+                    remVaccinations();
+                } else {
+                    getVaccinations();
+                }
+                break;
+            case "Alternative Fuel Station":
+                if(markersAlternativeFuelStation.length > 0){
+                    remAlternativeFuelStation();
+                } else {
+                    getAlternativeFuelStation();
+                }
+                break;
+            default:
+                break;
         }
     });
 }
 //---------------------------FIN funciones dentro del mapa--------------------
-
 //---------------------------------  D3.JS  ---------------------------------------
-
 //--------------------------------- FIN D3.JS  ---------------------------------------
